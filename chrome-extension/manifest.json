@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "MCPHub Desktop Agent",
+  "version": "1.0",
+  "description": "Desktop agent for MCPHub to manage MCP servers",
+  "permissions": [
+    "nativeMessaging",
+    "fileSystem",
+    "storage",
+    "background"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

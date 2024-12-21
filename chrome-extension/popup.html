@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MCPHub Desktop Agent</title>
+  <style>
+    body {
+      width: 300px;
+      padding: 16px;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .status {
+      padding: 8px;
+      margin-bottom: 16px;
+      border-radius: 4px;
+    }
+    .status.connected {
+      background-color: #e8f5e9;
+      color: #2e7d32;
+    }
+    .status.disconnected {
+      background-color: #ffebee;
+      color: #c62828;
+    }
+    button {
+      width: 100%;
+      padding: 8px;
+      border: none;
+      border-radius: 4px;
+      background-color: #2196f3;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #1976d2;
+    }
+  </style>
+</head>
+<body>
+  <div id="status" class="status">Checking connection...</div>
+  <button id="connectBtn">Connect Native Host</button>
+  <script src="popup.js"></script>
+</body>
+</html>

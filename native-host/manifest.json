@@ -1,0 +1,9 @@
+{
+  "name": "com.mcphub.agent",
+  "description": "Native host for MCPHub Desktop Agent",
+  "path": "HOST_PATH",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://EXTENSION_ID/"
+  ]
+}
