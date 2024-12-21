@@ -41,7 +41,7 @@ export default function Home() {
     const fetchData = async () => {
       try {
         // Check if desktop agent is running
-        await axios.get('http://localhost:3000/health');
+        await axios.get('http://localhost:3004/health');
 
         // Fetch available servers from registry
         const serversRes = await axios.get(
@@ -50,7 +50,7 @@ export default function Home() {
         setServers(serversRes.data.servers);
 
         // Fetch local config
-        const configRes = await axios.get('http://localhost:3000/config');
+        const configRes = await axios.get('http://localhost:3004/config');
         setConfig(configRes.data);
       } catch (err) {
         setError(
@@ -67,10 +67,10 @@ export default function Home() {
   const installServer = async (server: MCPServer) => {
     try {
       setLoading(true);
-      await axios.post('http://localhost:3000/install', server);
+      await axios.post('http://localhost:3004/install', server);
       
       // Refresh config
-      const configRes = await axios.get('http://localhost:3000/config');
+      const configRes = await axios.get('http://localhost:3004/config');
       setConfig(configRes.data);
       
       setError(null);
@@ -84,10 +84,10 @@ export default function Home() {
   const uninstallServer = async (serverName: string) => {
     try {
       setLoading(true);
-      await axios.delete(`http://localhost:3000/uninstall/${serverName}`);
+      await axios.delete(`http://localhost:3004/uninstall/${serverName}`);
       
       // Refresh config
-      const configRes = await axios.get('http://localhost:3000/config');
+      const configRes = await axios.get('http://localhost:3004/config');
       setConfig(configRes.data);
       
       setError(null);
