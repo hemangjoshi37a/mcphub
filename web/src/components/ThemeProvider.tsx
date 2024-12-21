@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useState, useEffect } from 'react';
 import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import CssBaseline from '@mui/material/CssBaseline';
 
 type ThemeMode = 'light' | 'dark';
@@ -9,7 +10,10 @@ interface ThemeContextType {
   toggleMode: () => void;
 }
 
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const ThemeContext = createContext<ThemeContextType>({ 
+  mode: 'light',
+  toggleMode: () => {}
+});
 
 export function useTheme() {
   const context = useContext(ThemeContext);
@@ -21,20 +25,14 @@ export function useTheme() {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Get initial theme from system preference
-  const prefersDarkMode = typeof window !== 'undefined' 
-    ? window.matchMedia('(prefers-color-scheme: dark)').matches 
-    : false;
-
+  const prefersDarkMode = useMediaQuery('(prefers-color-scheme: dark)');
   const [mode, setMode] = useState<ThemeMode>(prefersDarkMode ? 'dark' : 'light');
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e: MediaQueryListEvent) => {
-      setMode(e.matches ? 'dark' : 'light');
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    const savedMode = localStorage.getItem('themeMode') as ThemeMode | null;
+    if (savedMode) {
+      setMode(savedMode);
+    }
   }, []);
 
   const theme = useMemo(
@@ -66,15 +64,29 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
               },
             },
           },
+          MuiAppBar: {
+            styleOverrides: {
+              root: {
+                backgroundColor: mode === 'light' ? '#ffffff' : '#1e1e1e',
+                color: mode === 'light' ? '#000000' : '#ffffff',
+              },
+            },
+          },
         },
       }),
     [mode]
   );
 
+  const toggleMode = () => {
+    const newMode = mode === 'light' ? 'dark' : 'light';
+    setMode(newMode);
+    localStorage.setItem('themeMode', newMode);
+  };
+
   const value = useMemo(
     () => ({
       mode,
-      toggleMode: () => setMode((prevMode) => (prevMode === 'light' ? 'dark' : 'light')),
+      toggleMode,
     }),
     [mode]
   );
