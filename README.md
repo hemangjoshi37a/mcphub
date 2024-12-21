@@ -6,88 +6,167 @@
 [![Model Context Protocol](https://img.shields.io/badge/MCP-1.0.3-brightgreen.svg)](https://modelcontextprotocol.io/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
-MCPHub is a web-based manager for Model Context Protocol (MCP) servers. It provides a modern interface to discover, install, and manage MCP servers while maintaining compatibility with Claude Desktop.
+MCPHub is a hybrid web/desktop application for managing Model Context Protocol (MCP) servers. Think of it as apt/pip but for MCP servers, with a modern web interface and secure local system integration.
 
-## ⭐ Features
+## 🌟 Features
 
-- 📦 Browse and search available MCP servers
-- 🔄 One-click installation and updates
-- ⚙️ Configure server settings through intuitive UI
-- 🔒 Secure local system operations
-- 📊 Monitor server status and health
-- 🔍 Version tracking and compatibility checks
-- 💾 Local configuration management
-- 🌐 Cross-platform support
+- 📦 Browse and install MCP servers
+- ⚙️ Manage server configurations
+- 🔐 Secure local operations through desktop agent
+- 🌐 Web-based interface
+- 🔄 Real-time status monitoring
+- 🛠️ Environment variable management
+- 📝 Claude Desktop config integration
+- 🖥️ Cross-platform support
 
 ## 🏗️ Architecture
 
-MCPHub uses a hybrid architecture:
-- Web Frontend: Next.js-based web application
-- Desktop Agent: FastAPI-based local service
-- Configuration: Integration with Claude Desktop config
+MCPHub uses a hybrid architecture consisting of three main components:
+
+### 1. Desktop Agent
+- FastAPI-based local service
+- Handles file system operations
+- Manages Claude Desktop config
+- Executes installation commands
+- Runs on localhost:3000
+
+### 2. Web Frontend
+- Next.js application
+- Material-UI components
+- TypeScript support
+- Real-time server status
+- Dynamic configuration UI
+
+### 3. Server Registry
+- YAML-based server catalog
+- Standardized configurations
+- Easy contribution process
+- Version tracking
 
 ## 🚀 Quick Start
 
-### Desktop Agent
-
-1. Install dependencies:
+### Desktop Agent Setup
+1. Navigate to the agent directory:
 ```bash
 cd desktop-agent
+```
+
+2. Install dependencies:
+```bash
 pip install -r requirements.txt
 ```
 
-2. Run the agent:
+3. Start the agent:
 ```bash
 python src/main.py
 ```
 
-### Web Frontend (Development)
-
-1. Install dependencies:
+### Web Frontend Setup
+1. Navigate to the web directory:
 ```bash
 cd web
+```
+
+2. Install dependencies:
+```bash
 npm install
 ```
 
-2. Run development server:
+3. Start development server:
 ```bash
 npm run dev
 ```
 
-3. Open http://localhost:3000 in your browser
+4. Open http://localhost:3000 in your browser
 
-## 🔧 Server Configuration
+## 📁 Project Structure
+```
+mcphub/
+├── desktop-agent/           # Local system operations
+│   ├── src/
+│   │   └── main.py         # FastAPI application
+│   └── requirements.txt     # Python dependencies
+├── web/                    # Next.js frontend
+│   ├── src/
+│   │   ├── pages/         # React components
+│   │   └── styles/        # CSS styles
+│   └── package.json       # Node.js dependencies
+└── registry/              # Server registry
+    └── servers.yaml       # Available servers
+```
 
-MCPHub manages MCP servers through the Claude Desktop configuration file located at:
+## ⚙️ Configuration
+
+### Claude Desktop Integration
+MCPHub manages the Claude Desktop config file located at:
 - Windows: `%APPDATA%/Claude/claude_desktop_config.json`
 - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - Linux: `~/.config/Claude/claude_desktop_config.json`
 
-## 📝 Server Registry
-
-Available MCP servers are listed in `registry/servers.yaml`. To add a new server:
-1. Fork the repository
-2. Add your server details to `registry/servers.yaml`
-3. Create a pull request
-
-Example server entry:
-```yaml
-- name: "GitHub MCP Server"
-  description: "GitHub operations server for LLMs"
-  runtime: "node"
-  package: "@modelcontextprotocol/server-github"
-  version: "1.0.0"
-  command_args:
-    - "@modelcontextprotocol/server-github"
-  env:
-    GITHUB_PERSONAL_ACCESS_TOKEN: ""
+### Server Configuration Example
+```json
+{
+  "mcpServers": {
+    "github": {
+      "command": "node",
+      "args": [
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "your-token-here"
+      }
+    }
+  }
+}
 ```
+
+## 🔄 Local Development
+
+### Desktop Agent API Endpoints
+- GET `/health` - Health check
+- GET `/config` - Get Claude config
+- POST `/config` - Update Claude config
+- POST `/install` - Install MCP server
+- DELETE `/uninstall/{server_name}` - Uninstall server
+
+### Web Frontend Development
+- Uses Next.js 13
+- Material-UI for components
+- Axios for API calls
+- TypeScript for type safety
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+1. Fork the repository
+2. Create your feature branch:
+```bash
+git checkout -b feature/amazing-feature
+```
+3. Commit your changes:
+```bash
+git commit -m 'Add amazing feature'
+```
+4. Push to the branch:
+```bash
+git push origin feature/amazing-feature
+```
+5. Open a Pull Request
 
-## 📄 License
+### Adding New MCP Servers
+Add your server to `registry/servers.yaml`:
+```yaml
+- name: "Your MCP Server"
+  description: "Server description"
+  runtime: "node"  # or "python"
+  package: "your-package-name"
+  version: "1.0.0"
+  command_args:
+    - "your-command-args"
+  env:
+    YOUR_ENV_VAR: ""
+```
+
+## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
