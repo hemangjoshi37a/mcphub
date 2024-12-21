@@ -1,118 +1,64 @@
-// ... (previous imports remain the same)
-import { checkExtension, getConfig, updateConfig, installServer as installServerAgent, uninstallServer as uninstallServerAgent } from '../utils/desktopAgent';
+// Previous imports remain same
+import { ExtensionCheck } from '../components/ExtensionCheck';
 
-// ... (interfaces remain the same)
+// Add extension ID constant
+const EXTENSION_ID = 'your-extension-id'; // Replace with actual ID after publishing
 
 export default function Home() {
-  // ... (previous state declarations remain the same)
+  // ... previous state declarations
   const [extensionInstalled, setExtensionInstalled] = useState(false);
 
   useEffect(() => {
-    const checkDesktopAgent = async () => {
-      const isInstalled = await checkExtension();
-      setExtensionInstalled(isInstalled);
-
-      if (isInstalled) {
-        try {
-          // Fetch available servers from registry
-          const serversRes = await axios.get(
-            'https://raw.githubusercontent.com/hemangjoshi37a/mcphub/main/registry/servers.yaml',
-            {
-              transformResponse: [(data) => data]
-            }
-          );
-
-          // Parse YAML data
-          const parsedData = yaml.load(serversRes.data) as RegistryData;
-          if (!parsedData?.servers || !Array.isArray(parsedData.servers)) {
-            throw new Error('Invalid server registry data');
-          }
-          setServers(parsedData.servers);
-
-          // Get config from extension
-          const configData = await getConfig();
-          setConfig(configData);
-        } catch (err: any) {
-          console.error('Error fetching data:', err);
-          setError(err.message);
-        } finally {
-          setLoading(false);
+    const checkExtension = async () => {
+      try {
+        if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+          setExtensionInstalled(false);
+          return;
         }
-      } else {
-        setError('Desktop agent extension not installed. Please install the extension to use MCPHub.');
+
+        // Try to communicate with the extension
+        await chrome.runtime.sendMessage(EXTENSION_ID, { type: 'PING' });
+        setExtensionInstalled(true);
+
+        // Continue with data fetching if extension is installed
+        await fetchData();
+      } catch (err) {
+        setExtensionInstalled(false);
+      } finally {
         setLoading(false);
       }
     };
 
-    checkDesktopAgent();
-    const interval = setInterval(checkDesktopAgent, 5000); // Check every 5 seconds
+    checkExtension();
+    const interval = setInterval(checkExtension, 5000); // Check every 5 seconds
     return () => clearInterval(interval);
   }, []);
 
-  const installServer = async (server: MCPServer) => {
-    if (!extensionInstalled) {
-      setError('Desktop agent extension not installed');
-      return;
-    }
+  // ... rest of your existing code
 
-    try {
-      setInstallInProgress(server.name);
-      await installServerAgent(server);
-      const configData = await getConfig();
-      setConfig(configData);
-      setError(null);
-    } catch (err: any) {
-      console.error('Installation error:', err);
-      setError(err.message);
-    } finally {
-      setInstallInProgress(null);
-    }
-  };
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-  const uninstallServer = async (serverName: string) => {
-    if (!extensionInstalled) {
-      setError('Desktop agent extension not installed');
-      return;
-    }
+  if (!extensionInstalled) {
+    return <ExtensionCheck isInstalled={false} extensionId={EXTENSION_ID} />;
+  }
 
-    try {
-      await uninstallServerAgent(serverName);
-      const configData = await getConfig();
-      setConfig(configData);
-      setError(null);
-    } catch (err: any) {
-      console.error('Uninstallation error:', err);
-      setError(err.message);
-    }
-  };
-
-  const handleConfigSave = async () => {
-    if (!selectedServer || !extensionInstalled) return;
-
-    try {
-      const newConfig = {
-        ...config,
-        mcpServers: {
-          ...config?.mcpServers,
-          [selectedServer.name]: {
-            ...config?.mcpServers?.[selectedServer.name],
-            port: parseInt(serverConfig.port),
-            auth_token: serverConfig.auth_token,
-            env: Object.entries(serverConfig)
-              .filter(([key]) => key !== 'port' && key !== 'auth_token')
-              .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {})
-          }
-        }
-      };
-
-      await updateConfig(newConfig);
-      setConfig(newConfig);
-      setConfigDialogOpen(false);
-      setError(null);
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
-  // ... (rest of the component remains the same)
+  return (
+    <Box>
+      <AppBar />
+      <Toolbar />
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+          <ExtensionCheck isInstalled={true} extensionId={EXTENSION_ID} />
+        </Box>
+        
+        {/* Rest of your existing JSX */}
+      </Container>
+    </Box>
+  );
 }
