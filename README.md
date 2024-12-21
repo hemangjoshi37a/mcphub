@@ -1,68 +1,59 @@
 # MCPHub 🚀
 
 [![Web](https://img.shields.io/badge/Web-Next.js-black.svg)](https://nextjs.org/)
-[![Agent](https://img.shields.io/badge/Agent-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
+[![Extension](https://img.shields.io/badge/Extension-Chrome-4285F4.svg)](https://developer.chrome.com/docs/extensions/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Model Context Protocol](https://img.shields.io/badge/MCP-1.0.3-brightgreen.svg)](https://modelcontextprotocol.io/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
-MCPHub is a hybrid web/desktop application for managing Model Context Protocol (MCP) servers. Think of it as apt/pip but for MCP servers, with a modern web interface and secure local system integration.
+MCPHub is a hybrid web/extension application for managing Model Context Protocol (MCP) servers. Think of it as apt/pip but for MCP servers, with a modern web interface and secure local system integration.
 
 ## 🌟 Features
 
 - 📦 Browse and install MCP servers
 - ⚙️ Manage server configurations
-- 🔐 Secure local operations through desktop agent
+- 🔐 Secure local operations through Chrome extension
 - 🌐 Web-based interface
 - 🔄 Real-time status monitoring
 - 🛠️ Environment variable management
 - 📝 Claude Desktop config integration
 - 🖥️ Cross-platform support
 
-## 🏗️ Architecture
-
-MCPHub uses a hybrid architecture consisting of three main components:
-
-### 1. Desktop Agent
-- FastAPI-based local service
-- Handles file system operations
-- Manages Claude Desktop config
-- Executes installation commands
-- Runs on localhost:3000
-
-### 2. Web Frontend
-- Next.js application
-- Material-UI components
-- TypeScript support
-- Real-time server status
-- Dynamic configuration UI
-
-### 3. Server Registry
-- YAML-based server catalog
-- Standardized configurations
-- Easy contribution process
-- Version tracking
-
 ## 🚀 Quick Start
 
-### Desktop Agent Setup
-1. Navigate to the agent directory:
-```bash
-cd desktop-agent
-```
+### Install Chrome Extension and Native Host
 
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
+**Windows:**
+1. Clone this repository
+2. Run installation script:
+```batch
+cd chrome-extension/scripts
+windows-install.bat
 ```
+3. Load the extension in Chrome:
+   - Open `chrome://extensions/`
+   - Enable Developer mode
+   - Click "Load unpacked"
+   - Select the `chrome-extension` directory
 
-3. Start the agent:
+**MacOS/Linux:**
+1. Clone this repository
+2. Run installation script:
 ```bash
-python src/main.py
+cd chrome-extension/scripts
+# For MacOS:
+./macos-install.sh
+# For Linux:
+./linux-install.sh
 ```
+3. Load the extension in Chrome:
+   - Open `chrome://extensions/`
+   - Enable Developer mode
+   - Click "Load unpacked"
+   - Select the `chrome-extension` directory
 
-### Web Frontend Setup
-1. Navigate to the web directory:
+### Run Web Frontend
+1. Navigate to web directory:
 ```bash
 cd web
 ```
@@ -77,22 +68,22 @@ npm install
 npm run dev
 ```
 
-4. Open http://localhost:3000 in your browser
+4. Open http://localhost:3000 in Chrome
 
 ## 📁 Project Structure
 ```
 mcphub/
-├── desktop-agent/           # Local system operations
-│   ├── src/
-│   │   └── main.py         # FastAPI application
-│   └── requirements.txt     # Python dependencies
-├── web/                    # Next.js frontend
-│   ├── src/
-│   │   ├── pages/         # React components
-│   │   └── styles/        # CSS styles
-│   └── package.json       # Node.js dependencies
-└── registry/              # Server registry
-    └── servers.yaml       # Available servers
+├── chrome-extension/       # Chrome extension
+│   ├── manifest.json      # Extension manifest
+│   ├── background.js      # Service worker
+│   ├── popup/            # Extension popup UI
+│   ├── native-host/      # Native messaging host
+│   └── scripts/          # Installation scripts
+├── web/                  # Next.js frontend
+│   ├── src/             # Source code
+│   └── package.json     # Dependencies
+└── registry/            # Server registry
+    └── servers.yaml     # Available servers
 ```
 
 ## ⚙️ Configuration
@@ -120,20 +111,19 @@ MCPHub manages the Claude Desktop config file located at:
 }
 ```
 
-## 🔄 Local Development
+## 🔄 Development
 
-### Desktop Agent API Endpoints
-- GET `/health` - Health check
-- GET `/config` - Get Claude config
-- POST `/config` - Update Claude config
-- POST `/install` - Install MCP server
-- DELETE `/uninstall/{server_name}` - Uninstall server
+### Chrome Extension
+- Uses Manifest V3
+- Native messaging for system operations
+- Auto-generated extension ID
+- Cross-platform installation scripts
 
-### Web Frontend Development
-- Uses Next.js 13
-- Material-UI for components
-- Axios for API calls
-- TypeScript for type safety
+### Web Frontend
+- Next.js 13 with TypeScript
+- Material-UI components
+- Chrome extension integration
+- Real-time status monitoring
 
 ## 🤝 Contributing
 
