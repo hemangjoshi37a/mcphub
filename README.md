@@ -1,100 +1,104 @@
 # MCPHub 🚀
 
-[![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
+[![Web](https://img.shields.io/badge/Web-Next.js-black.svg)](https://nextjs.org/)
+[![Agent](https://img.shields.io/badge/Agent-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Model Context Protocol](https://img.shields.io/badge/MCP-1.0.3-brightgreen.svg)](https://modelcontextprotocol.io/)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 
-MCPHub is a cross-platform GUI application that makes discovering, installing, and managing Model Context Protocol (MCP) servers as easy as managing packages with pip or libraries in Arduino IDE.
+MCPHub is a web-based manager for Model Context Protocol (MCP) servers. It provides a modern interface to discover, install, and manage MCP servers while maintaining compatibility with Claude Desktop.
 
-![MCPHub Screenshot](docs/images/screenshot.png)
-
-## 🌟 Features
+## ⭐ Features
 
 - 📦 Browse and search available MCP servers
 - 🔄 One-click installation and updates
 - ⚙️ Configure server settings through intuitive UI
-- 🔒 Manage authentication and security settings
+- 🔒 Secure local system operations
 - 📊 Monitor server status and health
 - 🔍 Version tracking and compatibility checks
-- 💾 Local configuration storage
-- 🌐 Cross-platform support (Windows, macOS, Linux)
+- 💾 Local configuration management
+- 🌐 Cross-platform support
+
+## 🏗️ Architecture
+
+MCPHub uses a hybrid architecture:
+- Web Frontend: Next.js-based web application
+- Desktop Agent: FastAPI-based local service
+- Configuration: Integration with Claude Desktop config
 
 ## 🚀 Quick Start
 
-1. Install MCPHub:
+### Desktop Agent
+
+1. Install dependencies:
 ```bash
-pip install mcphub
+cd desktop-agent
+pip install -r requirements.txt
 ```
 
-2. Launch the application:
+2. Run the agent:
 ```bash
-mcphub
+python src/main.py
 ```
 
-## 💻 Development Setup
+### Web Frontend (Development)
 
-1. Clone the repository:
+1. Install dependencies:
 ```bash
-git clone https://github.com/hemangjoshi37a/mcphub.git
-cd mcphub
+cd web
+npm install
 ```
 
-2. Create and activate virtual environment:
+2. Run development server:
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+npm run dev
 ```
 
-3. Install development dependencies:
-```bash
-pip install -r requirements-dev.txt
-```
+3. Open http://localhost:3000 in your browser
 
-4. Run the application in development mode:
-```bash
-python -m mcphub
-```
+## 🔧 Server Configuration
 
-## 🏗️ Project Structure
+MCPHub manages MCP servers through the Claude Desktop configuration file located at:
+- Windows: `%APPDATA%/Claude/claude_desktop_config.json`
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Linux: `~/.config/Claude/claude_desktop_config.json`
 
-```
-mcphub/
-├── mcphub/
-│   ├── __init__.py
-│   ├── app.py           # Main application entry
-│   ├── ui/             # UI components
-│   ├── core/           # Core functionality
-│   ├── models/         # Data models
-│   └── utils/          # Utility functions
-├── tests/              # Test suite
-├── docs/               # Documentation
-└── scripts/            # Development scripts
+## 📝 Server Registry
+
+Available MCP servers are listed in `registry/servers.yaml`. To add a new server:
+1. Fork the repository
+2. Add your server details to `registry/servers.yaml`
+3. Create a pull request
+
+Example server entry:
+```yaml
+- name: "GitHub MCP Server"
+  description: "GitHub operations server for LLMs"
+  runtime: "node"
+  package: "@modelcontextprotocol/server-github"
+  version: "1.0.0"
+  command_args:
+    - "@modelcontextprotocol/server-github"
+  env:
+    GITHUB_PERSONAL_ACCESS_TOKEN: ""
 ```
 
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🔗 Links
 
-- [Documentation](https://mcphub.readthedocs.io/)
+- [Documentation](https://mcphub.io/docs)
 - [Issue Tracker](https://github.com/hemangjoshi37a/mcphub/issues)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
 
 ---
 
 <div align="center">
-Made with ❤️ by the MCP community
+Made with ❤️ by the MCPHub community
 </div>
