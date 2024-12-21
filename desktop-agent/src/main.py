@@ -5,7 +5,7 @@ import os
 import json
 import subprocess
 import sys
-from typing import Dict, List
+from typing import Dict, List, Optional
 from pathlib import Path
 from dataclasses import dataclass
 from pydantic import BaseModel
@@ -23,10 +23,15 @@ app.add_middleware(
 
 class ServerConfig(BaseModel):
     name: str
+    description: str
+    repository: str
+    version: str
+    tags: List[str]
     runtime: str
-    package: str
+    install_command: str
+    install_args: Optional[List[str]] = None
     command_args: List[str]
-    env: Dict[str, str] = {}
+    default_config: Dict
 
 class ConfigUpdate(BaseModel):
     config: Dict
@@ -40,7 +45,13 @@ async def health_check():
 async def get_config():
     """Get Claude desktop config"""
     try:
-        config_path = Path(os.path.expandvars("%APPDATA%")) / "Claude" / "claude_desktop_config.json"
+        if sys.platform == "win32":
+            config_path = Path(os.path.expandvars("%APPDATA%")) / "Claude" / "claude_desktop_config.json"
+        elif sys.platform == "darwin":
+            config_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+        else:  # Linux and others
+            config_path = Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
+
         if config_path.exists():
             with open(config_path, 'r') as f:
                 return json.load(f)
@@ -52,7 +63,16 @@ async def get_config():
 async def update_config(config_update: ConfigUpdate):
     """Update Claude desktop config"""
     try:
-        config_path = Path(os.path.expandvars("%APPDATA%")) / "Claude" / "claude_desktop_config.json"
+        if sys.platform == "win32":
+            config_path = Path(os.path.expandvars("%APPDATA%")) / "Claude" / "claude_desktop_config.json"
+        elif sys.platform == "darwin":
+            config_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+        else:  # Linux and others
+            config_path = Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
+
+        # Create directory if it doesn't exist
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+
         with open(config_path, 'w') as f:
             json.dump(config_update.config, f, indent=2)
         return {"status": "success"}
@@ -64,21 +84,35 @@ async def install_server(server: ServerConfig):
     """Install MCP server"""
     try:
         if server.runtime == "node":
-            subprocess.run(["npm", "install", "-g", server.package], check=True)
-        else:
-            subprocess.run([sys.executable, "-m", "pip", "install", server.package], check=True)
+            if server.install_args:
+                subprocess.run([server.install_command, *server.install_args], check=True)
+            else:
+                subprocess.run(["npm", "install", "-g", server.package], check=True)
+        else:  # python
+            if server.install_args:
+                subprocess.run([sys.executable, "-m", "pip", "install", *server.install_args], check=True)
+            else:
+                subprocess.run([sys.executable, "-m", "pip", "install", "-e", "."], cwd=server.repository, check=True)
         
         # Update Claude config
         config = await get_config()
         config["mcpServers"] = config.get("mcpServers", {})
+        
+        # Extract env from default_config if it exists
+        env = server.default_config.get("env", {})
+        
         config["mcpServers"][server.name] = {
-            "command": "node" if server.runtime == "node" else "python",
+            "command": server.install_command,
             "args": server.command_args,
-            "env": server.env
+            "env": env,
+            "port": server.default_config.get("port", 8000),
+            "auth_token": server.default_config.get("auth_token", "")
         }
         
         await update_config(ConfigUpdate(config=config))
         return {"status": "success"}
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Installation failed: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
