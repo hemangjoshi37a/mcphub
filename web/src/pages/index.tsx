@@ -13,8 +13,16 @@ import {
   DialogContent,
   DialogActions,
   Chip,
-  Stack
+  Stack,
+  Grid,
+  Card,
+  CardContent,
+  CardActions,
+  Divider,
+  IconButton,
+  Tooltip
 } from '@mui/material';
+import { Settings as SettingsIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import axios from 'axios';
 import yaml from 'js-yaml';
 
@@ -52,30 +60,23 @@ export default function Home() {
   const [selectedServer, setSelectedServer] = useState<MCPServer | null>(null);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [installInProgress, setInstallInProgress] = useState<string | null>(null);
-  const [serverConfig, setServerConfig] = useState<Record<string, string>>({}); 
+  const [serverConfig, setServerConfig] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Check if desktop agent is running
         await axios.get('http://localhost:3004/health');
-
-        // Fetch available servers from registry
         const serversRes = await axios.get(
           'https://raw.githubusercontent.com/hemangjoshi37a/mcphub/main/registry/servers.yaml',
-          {
-            transformResponse: [(data) => data] // Prevent axios from parsing the response
-          }
+          { transformResponse: [(data) => data] }
         );
 
-        // Parse YAML data
         const parsedData = yaml.load(serversRes.data) as RegistryData;
         if (!parsedData?.servers || !Array.isArray(parsedData.servers)) {
           throw new Error('Invalid server registry data');
         }
         setServers(parsedData.servers);
 
-        // Fetch local config
         const configRes = await axios.get('http://localhost:3004/config');
         setConfig(configRes.data);
       } catch (err: any) {
@@ -98,11 +99,8 @@ export default function Home() {
       setInstallInProgress(server.name);
       setLoading(true);
       await axios.post('http://localhost:3004/install', server);
-      
-      // Refresh config
       const configRes = await axios.get('http://localhost:3004/config');
       setConfig(configRes.data);
-      
       setError(null);
     } catch (err: any) {
       console.error('Installation error:', err);
@@ -117,11 +115,8 @@ export default function Home() {
     try {
       setLoading(true);
       await axios.delete(`http://localhost:3004/uninstall/${serverName}`);
-      
-      // Refresh config
       const configRes = await axios.get('http://localhost:3004/config');
       setConfig(configRes.data);
-      
       setError(null);
     } catch (err: any) {
       console.error('Uninstallation error:', err);
@@ -133,7 +128,6 @@ export default function Home() {
 
   const openConfigDialog = (server: MCPServer) => {
     setSelectedServer(server);
-    // Initialize server config with current values or defaults
     const currentConfig = config?.mcpServers?.[server.name] || {};
     setServerConfig({
       port: currentConfig.port?.toString() || server.default_config.port?.toString() || '8000',
@@ -184,123 +178,199 @@ export default function Home() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h3" component="h1" gutterBottom>
-        MCPHub
-      </Typography>
+    <Box sx={{ bgcolor: 'grey.50', minHeight: '100vh', py: 4 }}>
+      <Container maxWidth="xl">
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+          <Typography variant="h4" component="h1" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
+            MCPHub
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary">
+            Model Context Protocol Server Manager
+          </Typography>
+        </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          Available Servers
-        </Typography>
-
-        {servers && servers.length > 0 ? (
-          servers.map((server) => (
-            <Paper key={server.name} sx={{ p: 2, mb: 2 }}>
-              <Typography variant="h6">{server.name}</Typography>
-              <Typography color="text.secondary" paragraph>
-                {server.description}
-              </Typography>
-              
-              <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-                <Chip label={`v${server.version}`} variant="outlined" size="small" />
-                <Chip label={server.runtime} color="primary" variant="outlined" size="small" />
-                {server.tags.map((tag) => (
-                  <Chip key={tag} label={tag} variant="outlined" size="small" />
-                ))}
-              </Stack>
-              
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                {config?.mcpServers?.[server.name] ? (
-                  <>
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      onClick={() => openConfigDialog(server)}
-                    >
-                      Configure
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      onClick={() => uninstallServer(server.name)}
-                    >
-                      Uninstall
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    variant="contained"
-                    onClick={() => installServer(server)}
-                    disabled={installInProgress === server.name}
-                  >
-                    {installInProgress === server.name ? 'Installing...' : 'Install'}
-                  </Button>
-                )}
-              </Box>
-            </Paper>
-          ))
-        ) : (
-          <Alert severity="info">
-            No servers available. Please check the server registry.
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
           </Alert>
         )}
-      </Box>
 
-      {selectedServer && (
-        <Dialog
-          open={configDialogOpen}
-          onClose={() => setConfigDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>Configure {selectedServer.name}</DialogTitle>
-          <DialogContent>
-            <Box sx={{ pt: 2 }}>
-              <TextField
-                fullWidth
-                label="Port"
-                type="number"
-                value={serverConfig.port}
-                onChange={(e) => setServerConfig(prev => ({ ...prev, port: e.target.value }))}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                label="Auth Token"
-                type="password"
-                value={serverConfig.auth_token}
-                onChange={(e) => setServerConfig(prev => ({ ...prev, auth_token: e.target.value }))}
-                sx={{ mb: 2 }}
-              />
-              {selectedServer.default_config.env && 
-                Object.entries(selectedServer.default_config.env).map(([key, defaultValue]) => (
-                  <TextField
-                    key={key}
-                    fullWidth
-                    label={key}
-                    value={serverConfig[key] || defaultValue}
-                    onChange={(e) => setServerConfig(prev => ({ ...prev, [key]: e.target.value }))}
-                    sx={{ mb: 2 }}
-                  />
-                ))
-              }
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setConfigDialogOpen(false)}>Cancel</Button>
-            <Button variant="contained" onClick={handleConfigSave}>
-              Save
-            </Button>
-          </DialogActions>
-        </Dialog>
-      )}
-    </Container>
+        <Grid container spacing={3}>
+          {servers && servers.length > 0 ? (
+            servers.map((server) => (
+              <Grid item xs={12} sm={6} md={4} key={server.name}>
+                <Card 
+                  elevation={1} 
+                  sx={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: 3
+                    }
+                  }}
+                >
+                  <CardContent sx={{ flexGrow: 1, pb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                      <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="h6" gutterBottom component="div" sx={{ fontWeight: 'bold' }}>
+                          {server.name}
+                        </Typography>
+                        <Chip 
+                          label={`v${server.version}`} 
+                          size="small" 
+                          sx={{ mr: 1, bgcolor: 'primary.main', color: 'white' }}
+                        />
+                        <Chip 
+                          label={server.runtime} 
+                          size="small"
+                          sx={{ bgcolor: server.runtime === 'python' ? '#3776AB' : '#339933', color: 'white' }} 
+                        />
+                      </Box>
+                    </Box>
+                    
+                    <Typography color="text.secondary" sx={{ mb: 2, minHeight: '2.5em' }}>
+                      {server.description}
+                    </Typography>
+                    
+                    <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
+                      {server.tags.map((tag) => (
+                        <Chip 
+                          key={tag} 
+                          label={tag} 
+                          size="small" 
+                          variant="outlined" 
+                          sx={{ bgcolor: 'rgba(0,0,0,0.04)' }}
+                        />
+                      ))}
+                    </Stack>
+                  </CardContent>
+
+                  <Divider />
+                  
+                  <CardActions sx={{ p: 2, bgcolor: 'background.default' }}>
+                    {config?.mcpServers?.[server.name] ? (
+                      <Box sx={{ display: 'flex', width: '100%', justifyContent: 'space-between' }}>
+                        <Tooltip title="Configure">
+                          <IconButton 
+                            onClick={() => openConfigDialog(server)}
+                            color="primary"
+                            size="small"
+                          >
+                            <SettingsIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Uninstall">
+                          <IconButton 
+                            onClick={() => uninstallServer(server.name)}
+                            color="error"
+                            size="small"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    ) : (
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        onClick={() => installServer(server)}
+                        disabled={installInProgress === server.name}
+                        sx={{ 
+                          textTransform: 'none',
+                          boxShadow: 'none',
+                          '&:hover': { boxShadow: 1 }
+                        }}
+                      >
+                        {installInProgress === server.name ? 'Installing...' : 'Install'}
+                      </Button>
+                    )}
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))
+          ) : (
+            <Grid item xs={12}>
+              <Alert severity="info">
+                No servers available. Please check the server registry.
+              </Alert>
+            </Grid>
+          )}
+        </Grid>
+
+        {selectedServer && (
+          <Dialog
+            open={configDialogOpen}
+            onClose={() => setConfigDialogOpen(false)}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{
+              elevation: 2,
+              sx: { borderRadius: 2 }
+            }}
+          >
+            <DialogTitle sx={{ borderBottom: 1, borderColor: 'divider', pb: 2 }}>
+              Configure {selectedServer.name}
+            </DialogTitle>
+            <DialogContent sx={{ mt: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <TextField
+                  label="Port"
+                  type="number"
+                  value={serverConfig.port}
+                  onChange={(e) => setServerConfig(prev => ({ ...prev, port: e.target.value }))}
+                  fullWidth
+                  variant="outlined"
+                  size="small"
+                />
+                <TextField
+                  label="Auth Token"
+                  type="password"
+                  value={serverConfig.auth_token}
+                  onChange={(e) => setServerConfig(prev => ({ ...prev, auth_token: e.target.value }))}
+                  fullWidth
+                  variant="outlined"
+                  size="small"
+                />
+                {selectedServer.default_config.env && 
+                  Object.entries(selectedServer.default_config.env).map(([key, defaultValue]) => (
+                    <TextField
+                      key={key}
+                      label={key}
+                      value={serverConfig[key] || defaultValue}
+                      onChange={(e) => setServerConfig(prev => ({ ...prev, [key]: e.target.value }))}
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                    />
+                  ))
+                }
+              </Box>
+            </DialogContent>
+            <DialogActions sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+              <Button 
+                onClick={() => setConfigDialogOpen(false)}
+                sx={{ textTransform: 'none' }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="contained" 
+                onClick={handleConfigSave}
+                sx={{ 
+                  textTransform: 'none',
+                  boxShadow: 'none',
+                  '&:hover': { boxShadow: 1 }
+                }}
+              >
+                Save Changes
+              </Button>
+            </DialogActions>
+          </Dialog>
+        )}
+      </Container>
+    </Box>
   );
 }
