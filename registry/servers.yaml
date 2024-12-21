@@ -4,40 +4,48 @@ servers:
     repository: https://github.com/cyanheads/atlas-mcp-server
     version: 1.0.0
     tags: [task-management, organization]
-    config_schema:
-      port:
-        type: integer
-        default: 8000
-      auth_token:
-        type: string
-        required: true
+    runtime: python
+    install_command: python3
+    command_args:
+      - -m
+      - atlas_mcp_server
+    default_config:
+      port: 8000
+      auth_token: ""
 
   - name: Git MCP Server
     description: Git operations server for LLMs
     repository: https://github.com/cyanheads/git-mcp-server
     version: 0.9.0
     tags: [git, version-control]
-    config_schema:
-      port:
-        type: integer
-        default: 8001
-      auth_token:
-        type: string
-        required: true
+    runtime: node
+    install_command: npm
+    install_args:
+      - install
+      - -g
+      - "@modelcontextprotocol/server-git"
+    command_args:
+      - "@modelcontextprotocol/server-git"
+    default_config:
+      port: 8001
+      auth_token: ""
+      repository_path: ""
 
-  - name: Win CLI MCP Server
-    description: Model Context Protocol server for secure command-line interactions on Windows systems
-    repository: https://github.com/SimonB97/win-cli-mcp-server
-    version: 0.8.0
-    tags: [windows, cli, system]
-    config_schema:
-      port:
-        type: integer
-        default: 8002
-      auth_token:
-        type: string
-        required: true
-      allowed_commands:
-        type: array
-        items: string
-        default: []
+  - name: GitHub MCP Server
+    description: GitHub operations server for LLMs
+    repository: https://github.com/modelcontextprotocol/server-github
+    version: 1.0.0
+    tags: [github, version-control]
+    runtime: node
+    install_command: npm
+    install_args:
+      - install
+      - -g
+      - "@modelcontextprotocol/server-github"
+    command_args:
+      - "@modelcontextprotocol/server-github"
+    default_config:
+      port: 8002
+      auth_token: ""
+      env:
+        GITHUB_PERSONAL_ACCESS_TOKEN: ""
