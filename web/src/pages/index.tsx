@@ -20,11 +20,13 @@ import {
   CardActions,
   Divider,
   IconButton,
-  Tooltip
+  Tooltip,
+  Toolbar,
 } from '@mui/material';
 import { Settings as SettingsIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import axios from 'axios';
 import yaml from 'js-yaml';
+import { AppBar } from '@/components/AppBar';
 
 interface MCPServer {
   name: string;
@@ -65,39 +67,46 @@ export default function Home() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        await axios.get('http://localhost:3004/health');
+        // Check if desktop agent is running and get config
+        const configRes = await axios.get('http://localhost:3004/config');
+        setConfig(configRes.data);
+
+        // Fetch available servers from registry
         const serversRes = await axios.get(
           'https://raw.githubusercontent.com/hemangjoshi37a/mcphub/main/registry/servers.yaml',
-          { transformResponse: [(data) => data] }
+          {
+            transformResponse: [(data) => data]
+          }
         );
 
+        // Parse YAML data
         const parsedData = yaml.load(serversRes.data) as RegistryData;
         if (!parsedData?.servers || !Array.isArray(parsedData.servers)) {
           throw new Error('Invalid server registry data');
         }
         setServers(parsedData.servers);
-
-        const configRes = await axios.get('http://localhost:3004/config');
-        setConfig(configRes.data);
       } catch (err: any) {
         console.error('Error fetching data:', err);
-        setError(
-          err.message === 'Invalid server registry data'
-            ? 'Failed to load server registry. Invalid data format.'
-            : 'Failed to connect to desktop agent. Please make sure it\'s running.'
-        );
+        if (err.message === 'Invalid server registry data') {
+          setError('Failed to load server registry. Invalid data format.');
+        } else if (err.code === 'ECONNREFUSED') {
+          setError('Failed to connect to desktop agent. Please make sure it\'s running.');
+        } else {
+          setError(err.message);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
+    const interval = setInterval(fetchData, 5000); // Refresh every 5 seconds
+    return () => clearInterval(interval);
   }, []);
 
   const installServer = async (server: MCPServer) => {
     try {
       setInstallInProgress(server.name);
-      setLoading(true);
       await axios.post('http://localhost:3004/install', server);
       const configRes = await axios.get('http://localhost:3004/config');
       setConfig(configRes.data);
@@ -106,14 +115,12 @@ export default function Home() {
       console.error('Installation error:', err);
       setError(`Failed to install ${server.name}: ${err.response?.data?.detail || err.message}`);
     } finally {
-      setLoading(false);
       setInstallInProgress(null);
     }
   };
 
   const uninstallServer = async (serverName: string) => {
     try {
-      setLoading(true);
       await axios.delete(`http://localhost:3004/uninstall/${serverName}`);
       const configRes = await axios.get('http://localhost:3004/config');
       setConfig(configRes.data);
@@ -121,23 +128,7 @@ export default function Home() {
     } catch (err: any) {
       console.error('Uninstallation error:', err);
       setError(`Failed to uninstall ${serverName}: ${err.response?.data?.detail || err.message}`);
-    } finally {
-      setLoading(false);
     }
-  };
-
-  const openConfigDialog = (server: MCPServer) => {
-    setSelectedServer(server);
-    const currentConfig = config?.mcpServers?.[server.name] || {};
-    setServerConfig({
-      port: currentConfig.port?.toString() || server.default_config.port?.toString() || '8000',
-      auth_token: currentConfig.auth_token || server.default_config.auth_token || '',
-      ...Object.entries(server.default_config.env || {}).reduce((acc, [key, value]) => ({
-        ...acc,
-        [key]: currentConfig.env?.[key] || value
-      }), {})
-    });
-    setConfigDialogOpen(true);
   };
 
   const handleConfigSave = async () => {
@@ -164,9 +155,22 @@ export default function Home() {
       setConfigDialogOpen(false);
       setError(null);
     } catch (err: any) {
-      console.error('Config update error:', err);
       setError(`Failed to update configuration: ${err.response?.data?.detail || err.message}`);
     }
+  };
+
+  const openConfigDialog = (server: MCPServer) => {
+    setSelectedServer(server);
+    const currentConfig = config?.mcpServers?.[server.name] || {};
+    setServerConfig({
+      port: currentConfig.port?.toString() || server.default_config.port?.toString() || '8000',
+      auth_token: currentConfig.auth_token || server.default_config.auth_token || '',
+      ...Object.entries(server.default_config.env || {}).reduce((acc, [key, value]) => ({
+        ...acc,
+        [key]: currentConfig.env?.[key] || value
+      }), {})
+    });
+    setConfigDialogOpen(true);
   };
 
   if (loading) {
@@ -178,17 +182,10 @@ export default function Home() {
   }
 
   return (
-    <Box sx={{ bgcolor: 'grey.50', minHeight: '100vh', py: 4 }}>
-      <Container maxWidth="xl">
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-          <Typography variant="h4" component="h1" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-            MCPHub
-          </Typography>
-          <Typography variant="subtitle1" color="text.secondary">
-            Model Context Protocol Server Manager
-          </Typography>
-        </Box>
-
+    <Box>
+      <AppBar />
+      <Toolbar /> {/* Spacer for fixed AppBar */}
+      <Container maxWidth="xl" sx={{ py: 4 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
