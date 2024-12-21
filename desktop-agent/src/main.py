@@ -7,7 +7,6 @@ import subprocess
 import sys
 from typing import Dict, List, Optional
 from pathlib import Path
-from dataclasses import dataclass
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -20,6 +19,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def get_config_path() -> Path:
+    """Get the path to the Claude config file based on the operating system"""
+    if sys.platform == "win32":
+        base_path = Path(os.environ["APPDATA"])
+    elif sys.platform == "darwin":
+        base_path = Path.home() / "Library" / "Application Support"
+    else:  # Linux and others
+        base_path = Path.home() / ".config"
+
+    config_path = base_path / "Claude" / "claude_desktop_config.json"
+    return config_path
+
+def ensure_config_exists():
+    """Ensure the config file and directory exist"""
+    config_path = get_config_path()
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    if not config_path.exists():
+        with open(config_path, 'w') as f:
+            json.dump({"mcpServers": {}}, f)
 
 class ServerConfig(BaseModel):
     name: str
@@ -45,17 +65,19 @@ async def health_check():
 async def get_config():
     """Get Claude desktop config"""
     try:
-        if sys.platform == "win32":
-            config_path = Path(os.path.expandvars("%APPDATA%")) / "Claude" / "claude_desktop_config.json"
-        elif sys.platform == "darwin":
-            config_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
-        else:  # Linux and others
-            config_path = Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
-
-        if config_path.exists():
-            with open(config_path, 'r') as f:
-                return json.load(f)
-        return {"mcpServers": {}}
+        ensure_config_exists()
+        config_path = get_config_path()
+        
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+            
+        # Ensure mcpServers key exists
+        if "mcpServers" not in config:
+            config["mcpServers"] = {}
+            with open(config_path, 'w') as f:
+                json.dump(config, f, indent=2)
+                
+        return config
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -63,16 +85,9 @@ async def get_config():
 async def update_config(config_update: ConfigUpdate):
     """Update Claude desktop config"""
     try:
-        if sys.platform == "win32":
-            config_path = Path(os.path.expandvars("%APPDATA%")) / "Claude" / "claude_desktop_config.json"
-        elif sys.platform == "darwin":
-            config_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
-        else:  # Linux and others
-            config_path = Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
-
-        # Create directory if it doesn't exist
-        config_path.parent.mkdir(parents=True, exist_ok=True)
-
+        ensure_config_exists()
+        config_path = get_config_path()
+        
         with open(config_path, 'w') as f:
             json.dump(config_update.config, f, indent=2)
         return {"status": "success"}
@@ -87,7 +102,7 @@ async def install_server(server: ServerConfig):
             if server.install_args:
                 subprocess.run([server.install_command, *server.install_args], check=True)
             else:
-                subprocess.run(["npm", "install", "-g", server.package], check=True)
+                subprocess.run(["npm", "install", "-g", server.repository], check=True)
         else:  # python
             if server.install_args:
                 subprocess.run([sys.executable, "-m", "pip", "install", *server.install_args], check=True)
