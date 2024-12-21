@@ -7,10 +7,15 @@ from typing import Dict, List
 import requests
 import threading
 from datetime import datetime
+from .core.server_manager import ServerManager
+from .ui.server_config_dialog import ServerConfigDialog
 
 class MCPHub(ctk.CTk):
     def __init__(self):
         super().__init__()
+
+        # Initialize server manager
+        self.server_manager = ServerManager()
 
         # Configure window
         self.title("MCPHub - MCP Server Manager")
@@ -20,6 +25,16 @@ class MCPHub(ctk.CTk):
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
+        self.create_sidebar()
+        self.create_main_frame()
+
+        # Initialize server registry
+        self.server_registry = self.load_server_registry()
+        
+        # Show browse page by default
+        self.show_browse_page()
+
+    def create_sidebar(self):
         # Create sidebar frame
         self.sidebar_frame = ctk.CTkFrame(self, width=200, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
@@ -47,20 +62,13 @@ class MCPHub(ctk.CTk):
         )
         self.settings_button.grid(row=3, column=0, padx=20, pady=10)
 
-        # Create main content frame
+    def create_main_frame(self):
         self.main_frame = ctk.CTkFrame(self)
         self.main_frame.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
 
-        # Initialize server registry
-        self.server_registry = self.load_server_registry()
-        
-        # Show browse page by default
-        self.show_browse_page()
-
     def load_server_registry(self) -> Dict:
         """Load the MCP server registry from a remote source"""
-        # TODO: Implement actual registry loading
-        # This is a placeholder that returns sample data
+        # TODO: Implement actual registry loading from a central repository
         return {
             "servers": [
                 {
@@ -71,6 +79,17 @@ class MCPHub(ctk.CTk):
                     "tags": ["task-management", "organization"],
                     "config_schema": {
                         "port": {"type": "integer", "default": 8000},
+                        "auth_token": {"type": "string", "required": True}
+                    }
+                },
+                {
+                    "name": "Git MCP Server",
+                    "description": "Git operations server for LLMs",
+                    "repository": "https://github.com/cyanheads/git-mcp-server",
+                    "version": "0.9.0",
+                    "tags": ["git", "version-control"],
+                    "config_schema": {
+                        "port": {"type": "integer", "default": 8001},
                         "auth_token": {"type": "string", "required": True}
                     }
                 }
@@ -114,6 +133,11 @@ class MCPHub(ctk.CTk):
         desc_label = ctk.CTkLabel(card, text=server_data["description"])
         desc_label.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="w")
 
+        # Version and tags
+        info_text = f"Version: {server_data['version']} | Tags: {', '.join(server_data['tags'])}"
+        info_label = ctk.CTkLabel(card, text=info_text, text_color="gray")
+        info_label.grid(row=2, column=0, padx=10, pady=(0, 10), sticky="w")
+
         # Add install button
         install_button = ctk.CTkButton(
             card, text="Install", width=100,
@@ -122,16 +146,148 @@ class MCPHub(ctk.CTk):
         install_button.grid(row=0, column=1, padx=10, pady=10, sticky="e")
 
     def install_server(self, server_data):
-        # TODO: Implement server installation logic
-        print(f"Installing {server_data['name']}...")
+        def install_thread():
+            success = self.server_manager.install_server(server_data)
+            if success:
+                self.after(0, lambda: self.show_message("Success", f"Successfully installed {server_data['name']}"))
+            else:
+                self.after(0, lambda: self.show_message("Error", f"Failed to install {server_data['name']}"))
+
+        # Show progress dialog
+        progress = self.show_progress(f"Installing {server_data['name']}...")
+        
+        # Start installation in thread
+        thread = threading.Thread(target=install_thread)
+        thread.start()
 
     def show_installed_page(self):
-        # TODO: Implement installed servers page
-        pass
+        # Clear main frame
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+
+        # Get installed servers
+        installed_servers = self.server_manager.get_installed_servers()
+
+        # Create scrollable frame for servers
+        servers_frame = ctk.CTkScrollableFrame(self.main_frame)
+        servers_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Add server cards
+        for server in installed_servers:
+            self.create_installed_server_card(servers_frame, server)
+
+    def create_installed_server_card(self, parent, server):
+        card = ctk.CTkFrame(parent)
+        card.pack(fill="x", padx=5, pady=5)
+
+        # Server name and status
+        name_label = ctk.CTkLabel(
+            card, text=server.name, font=ctk.CTkFont(size=16, weight="bold")
+        )
+        name_label.grid(row=0, column=0, padx=10, pady=(10, 5), sticky="w")
+
+        status_text = "Enabled" if server.enabled else "Disabled"
+        status_label = ctk.CTkLabel(card, text=status_text, text_color="gray")
+        status_label.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="w")
+
+        # Control buttons
+        button_frame = ctk.CTkFrame(card)
+        button_frame.grid(row=0, column=1, rowspan=2, padx=10, pady=10, sticky="e")
+
+        start_button = ctk.CTkButton(
+            button_frame, text="Start", width=80,
+            command=lambda: self.server_manager.start_server(server.name)
+        )
+        start_button.pack(side="left", padx=5)
+
+        stop_button = ctk.CTkButton(
+            button_frame, text="Stop", width=80,
+            command=lambda: self.server_manager.stop_server(server.name)
+        )
+        stop_button.pack(side="left", padx=5)
+
+        config_button = ctk.CTkButton(
+            button_frame, text="Configure", width=80,
+            command=lambda: self.show_config_dialog(server)
+        )
+        config_button.pack(side="left", padx=5)
+
+        uninstall_button = ctk.CTkButton(
+            button_frame, text="Uninstall", width=80,
+            command=lambda: self.uninstall_server(server.name)
+        )
+        uninstall_button.pack(side="left", padx=5)
+
+    def show_config_dialog(self, server):
+        config = {
+            "port": server.port,
+            "auth_token": server.auth_token,
+            "enabled": server.enabled
+        }
+        dialog = ServerConfigDialog(
+            self, server.name, config,
+            lambda new_config: self.server_manager.update_server_config(server.name, new_config)
+        )
+
+    def uninstall_server(self, server_name):
+        if self.server_manager.uninstall_server(server_name):
+            self.show_message("Success", f"Successfully uninstalled {server_name}")
+            self.show_installed_page()  # Refresh the page
+        else:
+            self.show_message("Error", f"Failed to uninstall {server_name}")
 
     def show_settings_page(self):
-        # TODO: Implement settings page
-        pass
+        # Clear main frame
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+
+        # Create settings form
+        settings_frame = ctk.CTkFrame(self.main_frame)
+        settings_frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+        # Registry URL setting
+        url_label = ctk.CTkLabel(
+            settings_frame, text="Registry URL:",
+            font=ctk.CTkFont(size=14, weight="bold")
+        )
+        url_label.grid(row=0, column=0, padx=10, pady=(20, 5), sticky="w")
+
+        url_entry = ctk.CTkEntry(settings_frame, width=300)
+        url_entry.grid(row=1, column=0, padx=10, pady=(0, 20), sticky="w")
+        url_entry.insert(0, "https://registry.mcphub.io")
+
+        # Auto-update setting
+        auto_update_var = ctk.BooleanVar(value=True)
+        auto_update = ctk.CTkSwitch(
+            settings_frame, text="Auto-update servers",
+            variable=auto_update_var
+        )
+        auto_update.grid(row=2, column=0, padx=10, pady=10, sticky="w")
+
+    def show_message(self, title: str, message: str):
+        dialog = ctk.CTkToplevel(self)
+        dialog.title(title)
+        dialog.geometry("300x150")
+        dialog.transient(self)
+        dialog.grab_set()
+
+        label = ctk.CTkLabel(dialog, text=message)
+        label.pack(expand=True)
+
+        button = ctk.CTkButton(dialog, text="OK", command=dialog.destroy)
+        button.pack(pady=20)
+
+    def show_progress(self, message: str) -> ctk.CTkToplevel:
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Progress")
+        dialog.geometry("300x150")
+        dialog.transient(self)
+        dialog.grab_set()
+
+        label = ctk.CTkLabel(dialog, text=message)
+        label.pack(expand=True)
+
+        return dialog
 
 def main():
     app = MCPHub()
