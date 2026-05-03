@@ -49,3 +49,18 @@ servers:
       auth_token: ""
       env:
         GITHUB_PERSONAL_ACCESS_TOKEN: ""
+  - name: CPFHub MCP Server
+    description: Official MCP server for CPFHub.io — enables AI agents to query Brazilian CPF data (full name, birth date, gender). LGPD compliant, ~300ms response time.
+    repository: https://github.com/cpfhub/cpfhub-mcp
+    version: 1.0.1
+    tags: [brazil, cpf, data-validation, api, lgpd]
+    runtime: node
+    install_command: npx
+    command_args:
+      - -y
+      - "@cpfhub/mcp"
+    default_config:
+      port: 8003
+      auth_token: ""
+      env:
+        CPFHUB_API_KEY: ""
